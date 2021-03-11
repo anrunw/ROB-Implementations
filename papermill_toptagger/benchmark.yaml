@@ -1,0 +1,118 @@
+workflow:
+    version: '0.3.0'
+    inputs:
+      files:
+        - 'code/'
+        - 'data/'
+    workflow:
+      type: 'serial'
+      specification:
+        steps:
+          - environment: '$[[env_preproc]]'
+            commands:
+              - '$[[cmd_preproc]]'
+          - environment: '$[[env_eval]]'
+            commands:
+              - '$[[cmd_eval]]'
+          - environment: 'heikomueller/toptaggerdemo:0.2.0'
+            commands:
+              - 'python code/compute-score.py data/evaluate/ results/'
+    outputs:
+      files:
+       - 'results/yProbBest.pkl'
+       - 'results/results.json'
+       - 'results/analyze.log'
+       - 'results/evaluate.log'
+       - 'results/preproc.log'
+postproc:
+    workflow:
+        version: 0.3.0
+        inputs:
+          files:
+            - 'code'
+            - 'data/evaluate/labels.pkl'
+            - $[[runs]]
+          parameters:
+            rundir: $[[runs]]
+        workflow:
+          type: serial
+          specification:
+            steps:
+              - environment: 'heikomueller/toptaggerdemo:0.2.0'
+                commands:
+                    - 'python code/plot-roc-auc.py "${rundir}" data/evaluate/labels.pkl results/'
+                    - 'python code/plot-roc-bg-reject.py "${rundir}" data/evaluate/labels.pkl results/'
+        outputs:
+            files:
+                - 'results/ROC-AUC.png'
+                - 'results/ROC-BGR.png'
+    inputs:
+        files:
+            - 'results/yProbBest.pkl'
+        runs: 'runs/'
+    outputs:
+        - source: 'results/ROC-AUC.png'
+          title: 'ROC Curves (AUC) for all Algorithms'
+          caption: 'ROC curves for all algorithms evaluated on the test sample, shown as the AUC ensemble median of multiple trainings.'
+          format:
+              type: 'image'
+        - source: 'results/ROC-BGR.png'
+          title: 'ROC Curves (Background Rejection at Signal Efficiency 50%) for all Algorithms'
+          caption: 'ROC curves for all algorithms evaluated on the test sample, shown as the background rejection ensemble median of multiple trainings.'
+          format:
+              type: 'image'
+modules:
+    - id: 'preproc'
+      name: 'Pre-Processing Step'
+      index: 0
+    - id: 'eval'
+      name: 'ML Evaluation Step'
+      index: 1
+parameters:
+    - name: 'env_preproc'
+      label: 'Environment (Pre-Processing)'
+      dtype: 'string'
+      defaultValue: 'heikomueller/toptaggerdemo:0.2.0'
+      index: 0
+      group: 'preproc'
+    - name: 'cmd_preproc'
+      label: 'Command  (Pre-Processing)'
+      dtype: 'string'
+      defaultValue: 'python code/preprocess-dataset.py
+        data/test_jets.pkl
+        data/preprocess/
+        results/'
+      index: 1
+      group: 'preproc'
+    - name: 'env_eval'
+      label: 'Environment (ML)'
+      dtype: 'string'
+      defaultValue: 'heikomueller/toptaggerdemo:0.2.0'
+      index: 2
+      group: 'eval'
+    - name: 'cmd_eval'
+      label: 'Command (ML)'
+      dtype: 'string'
+      defaultValue: 'python code/your_script.py
+        results/processed_test_jets.pkl
+        data/evaluate/
+        results/'
+      index: 3
+      group: 'eval'
+results:
+    file: 'results/results.json'
+    schema:
+        - name: 'bg_reject'
+          label: 'Background rejection (at 50%)'
+          dtype: 'float'
+        - name: 'bg_reject_std'
+          label: 'Background rejection (STD)'
+          dtype: 'float'
+        - name: 'auc'
+          label: 'AUC'
+          dtype: 'float'
+    orderBy:
+        - name: 'bg_reject'
+          sortDesc: true
+        - name: 'bg_reject_std'
+          sortDesc: false

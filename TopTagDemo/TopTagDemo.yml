@@ -1,0 +1,55 @@
+  
+workflow:
+    files:
+        inputs:
+        - code/TopTag.ipynb
+	- code/preprocess.ipynb
+        - data/X_test.npy
+	- data/y_test.npy
+	- models/dense.h5
+        outputs:
+        - data/X_preprocess.npy
+	- data/y_preprocess.npy
+        - results/roc_curve.png
+   
+    parameters:
+        Xdata: data/X_test.npy
+	ydata: data/y_test.npy
+        outputXdata: data/X_preprocess.npy
+	outputYdata: data/y_preprocess.npy
+	model: models/dense.h5
+	outputROC: results/roc.png
+
+    steps:
+    - name: "preprocess"
+      files:
+          inputs:
+          - data/X_test.npy
+	  - data/y_test.npy
+          - code/preprocess.py
+          outputs:
+          - data/X_preprocess.npy
+	  - data/y_preprocess.npy
+      action:
+          notebook: 'code/preprocess.ipynb'
+          params:
+          - X_test
+	  - y_test
+          - outputXdata
+	  - outputYdata
+    - name: "analyze"
+      files:
+          inputs:
+	  - code/TopTag.ipynb
+          - data/X_preprocess.npy
+	  - data/y_preprocess.npy
+	  - models/dense.h5
+          outputs:
+          - results/roc_curve.png
+      action:
+          notebook: 'code/analyze.ipynb'
+          params:
+          - outputXdata
+	  - outputYdata
+          - model
+          - outputROC

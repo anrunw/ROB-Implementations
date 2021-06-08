@@ -46,7 +46,7 @@ workflow:
           outputs:
           - results/roc_curve.png
       action:
-          notebook: 'notebooks/HelloWorld.ipynb'
+          notebook: 'code/analyze.ipynb'
           params:
           - outputXdata
 	  - outputYdata
